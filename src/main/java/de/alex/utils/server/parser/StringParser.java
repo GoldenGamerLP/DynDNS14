@@ -26,11 +26,11 @@ public class StringParser extends ArgumentParser<String> {
         }
 
         if(minLength != null && msg.length() < minLength) {
-            throw new Exception("Parameter length is shorter than: %d, parameter: %s and length: %d".formatted(minLength,this.getIdentifier(),msg.length()));
+            throw new Exception("Not optional parameter: %s has length %d and is shorter, but is required to have length %d".formatted(this.getIdentifier(),msg.length(),minLength));
         }
 
         if(maxlength != null && msg.length() > maxlength) {
-            throw new Exception("Parameter length is longer than: %d, parameter: %s and length: %d".formatted(minLength,this.getIdentifier(),msg.length()));
+            throw new Exception("Not optional parameter: %s has length %d and is longer, but is required to have length %d".formatted(this.getIdentifier(),msg.length(),minLength));
         }
 
         return String.valueOf(msg);

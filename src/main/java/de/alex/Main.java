@@ -5,6 +5,7 @@ import de.alex.utils.LoggerUtils;
 import de.alex.utils.server.ArgumentParser;
 import de.alex.utils.server.HttpResponse;
 import de.alex.utils.server.parser.BooleanParserBuilder;
+import de.alex.utils.server.parser.LongParserBuilder;
 import de.alex.utils.server.parser.StringParserBuilder;
 
 import java.util.Arrays;
@@ -23,7 +24,7 @@ public class Main {
 
     public Main(String[] args) {
         logger = LoggerUtils.getLogger("Main");
-        if(args.length < 1) {
+        if (args.length < 1) {
             logger.severe("No enough arguments: port");
             return;
         }
@@ -31,13 +32,29 @@ public class Main {
         int port = Integer.parseInt(args[0]);
 
         Server server = new Server();
-        ArgumentParser<String> tokenParser = StringParserBuilder.newBuilder("token").withOptional(false).withMinLength(20).build();
-        ArgumentParser<String> zoneParser = StringParserBuilder.newBuilder("zone").withMinLength(15).withOptional(false).build();
+        ArgumentParser<String> tokenParser = StringParserBuilder.newBuilder("token").withOptional(false)
+                .withMinLength(20).build();
+        ArgumentParser<String> zoneParser = StringParserBuilder.newBuilder("zone").withMinLength(15).withOptional(false)
+                .build();
         ArgumentParser<String> ipParser = StringParserBuilder.newBuilder("ip").withOptional(false).build();
         ArgumentParser<String> recordParser = StringParserBuilder.newBuilder("record").withOptional(false).build();
-        ArgumentParser<Boolean> isProxiedParser = BooleanParserBuilder.newBuilder("proxied").withOptional(false).build();
+        ArgumentParser<Boolean> isProxiedParser = BooleanParserBuilder.newBuilder("proxied").withOptional(false)
+                .build();
+        ArgumentParser<Long> pingTimestamp = LongParserBuilder.newBuilder("timestamp").withOptional(true).build();
 
-        server.addRoute("/test",incomingRequest -> HttpResponse.ofPlainText("Information: method: %s - url: %s".formatted(incomingRequest.getHttpVersion(), incomingRequest.getRoute())));
+        server.addRoute("/test", incomingRequest -> HttpResponse.ofPlainText("Information: method: %s - url: %s"
+                .formatted(incomingRequest.getHttpVersion(), incomingRequest.getRoute())));
+
+        server.addRoute("/ping", inReq -> {
+            Long timestamp = inReq.getParameter(pingTimestamp);
+            logger.info("Ping request received.");
+            if (timestamp != null) {
+                long diff = System.currentTimeMillis() - timestamp;
+                return HttpResponse.ofPlainText("%dms".formatted(diff));
+            }
+
+            return HttpResponse.ofPlainText("Pong street14 services!");
+        }, pingTimestamp);
 
         server.addRoute("/dyndns/update", incomingRequest -> {
             String bearer = incomingRequest.getParameter(tokenParser);
@@ -49,14 +66,14 @@ public class Main {
             logger.info("Updating DNS for IP: %s".formatted(ip));
             boolean success;
             try {
-                success = utils.createOrUpdateDNS(bearer,zone, record, ip, isProxied);
+                success = utils.createOrUpdateDNS(bearer, zone, record, ip, isProxied);
             } catch (Exception e) {
                 return HttpResponse.ofError(e);
             }
 
             logger.info("Updated DNS for IP: %s - Status: %s".formatted(ip, success ? "Updated" : "Not updated"));
             return HttpResponse.ofPlainText(success ? "Updated" : "Something went wrong");
-        },tokenParser,zoneParser,ipParser,recordParser,isProxiedParser);
+        }, tokenParser, zoneParser, ipParser, recordParser, isProxiedParser);
 
         server.addRoute("/dyndns/get", (incomingRequest) -> {
             String bearer = incomingRequest.getParameter(tokenParser);
@@ -70,7 +87,8 @@ public class Main {
                 return HttpResponse.ofError(e);
             }
 
-            return HttpResponse.ofPlainText(Arrays.toString(records.stream().map(CloudflareUtils.DNSRecord::getName).toArray()));
+            return HttpResponse
+                    .ofPlainText(Arrays.toString(records.stream().map(CloudflareUtils.DNSRecord::getName).toArray()));
         }, tokenParser, zoneParser);
 
         server.startServer(port);

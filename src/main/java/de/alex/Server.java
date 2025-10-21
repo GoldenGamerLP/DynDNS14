@@ -80,7 +80,15 @@ public class Server {
                     }
 
                     if(!exceptions.isEmpty()) {
-                        sendResponse(socket, HttpResponse.ofError("Error while parsing arguments: " + exceptions.stream().map(Throwable::getMessage).collect(Collectors.joining(System.lineSeparator()," ," + System.lineSeparator(), ""))));
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("Error while parsing arguments for:").append(request.url());
+                        sb.append(System.lineSeparator());
+
+                        for(Exception e : exceptions) {
+                            sb.append(" - ").append(e.toString()).append(System.lineSeparator());
+                        }
+
+                        sendResponse(socket, HttpResponse.ofError(sb.toString()));
                         return;
                     }
 
